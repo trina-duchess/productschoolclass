@@ -9,37 +9,41 @@
 
 ## 1. Trigger & loop type
 
-**Chosen type:** _heartbeat · cron · hook · goal_
+**Chosen type:** Cron (primary) + Hook (backup)
 
-_Why this type? (e.g. a Monday-morning cron that assembles the weekly update, plus a hook on a new PRD to propose stories.)_
+**Why this type:** Cortex needs to collect project data from team tools and complete a draft for human review by noon each Friday — a fixed weekly deadline drives the primary cron trigger. A backup hook also fires if a critical update lands after the cron run, so an urgent item doesn't sit unseen until next week's cycle.
+
+**Ruled out:**
+- *Heartbeat* — overkill for status updates; nothing here needs continuous polling.
+- *Goal* — the whole run is anchored to a fixed weekly deadline (data collected and drafted by noon Friday), not an open-ended loop waiting on validation.
+
+**Idempotency / dedupe:** Cortex tracks each processed message by ID and timestamp, so the same inbound event firing the hook twice doesn't produce two drafts.
 
 ## 2. Goal / definition of done
 
-_What outcome is this loop responsible for? For a goal loop, what validation says "done"? (e.g. a status update grounded in real activity, queued for review, nothing posted.)_
+Project data has been pulled from team tools, a status draft has been written and passed the critic's review, and any proposed backlog stories are queued — all held for human review. Cortex never posts or sends anything itself.
 
 ## 3. Stop conditions
 
 | Condition | What it looks like | What happens |
 |---|---|---|
-| **Success** | _…_ | _…_ |
-| **Stuck / give up** | _…_ | _escalate / log / halt_ |
-| **Escalate to human** | _…_ | _HITL checkpoint (from agent-line-map)_ |
+| **Success** | Draft passes the critic's validation and is queued at the HITL checkpoint by noon Friday | Held for review, nothing posted |
+| **Stuck / give up** | A data source can't be reached after 3 attempts, or the critic rejects the draft without a pass across 8 iterations (matches `MAX_ITERATIONS`) | Stop, log the reason, don't force a draft through |
+| **Escalate to human** | Content touches an already above-the-line item: a flagged at-risk project, anything implying a leadership commitment or deadline, or a story batch over cap | Immediate HITL flag, separate from the normal weekly queue |
 
 ## 4. State
 
-_What persists across iterations, and what's the scope? (e.g. per-project context and last week's update; no cross-project confidential leakage.)_
+Cortex now persists a per-project record of risks it has already flagged, so it doesn't re-raise the same risk every Friday. Everything else (roadmap, team norms, past updates) still reads fresh from source each run — only the flag history carries over. Scope: risk-flag history stays scoped to its own project, no cross-project leakage.
 
 ## 5. The five things a loop can lean on
 
-_`state` is always-on. `connectors` only if you already have one wired (e.g. a Jira key or Google MCP), otherwise just note it as a plan. `skills`, `subagents`, `work tree` scale with autonomy; "not needed yet, because…" is a valid answer._
-
 | Component | For Cortex |
 |---|---|
-| **Work tree** (isolated workspace per run, a git worktree) | _…_ |
-| **Skills** (reusable capabilities) | _…_ |
-| **Plugins / connectors** (tools & access, optional if you don't have one yet) | _…_ |
-| **Subagents** (independent check when the loop can't grade itself) | _placeholder → M3 orchestration-map.md_ |
-| **State tracking** | _…_ |
+| **Work tree** (isolated workspace per run, a git worktree) | Not needed — Cortex drafts text and never edits code or files in the repo, so there's nothing to isolate per run. |
+| **Skills** (reusable capabilities) | Not formalized yet — the current tool functions in `tools.py` already serve this role informally; whether they need a distinct skills layer is open for a later module. |
+| **Plugins / connectors** (tools & access, optional if you don't have one yet) | Not wired yet — `tools.py` currently reads local fixture files, not a live Jira key or GitHub/Slack API. Plan: wire real connectors once this design passes review. |
+| **Subagents** (independent check when the loop can't grade itself) | Already built — `critic.py` is a working independent check on the draft today, not a placeholder. |
+| **State tracking** | Persists a per-project record of risks already flagged, so the same risk isn't re-raised every cycle; scoped per project. |
 
 > Context plan (M4) and the hand-off to bounds & evals (M5) come in later modules, you'll add them to their own deliverables then, not here.
 
