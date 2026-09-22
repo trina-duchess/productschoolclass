@@ -28,7 +28,7 @@ Project data has been pulled from team tools, a status draft has been written an
 | Condition | What it looks like | What happens |
 |---|---|---|
 | **Success** | Draft passes the critic's validation and is queued at the HITL checkpoint by noon Friday | Held for review, nothing posted |
-| **Stuck / give up** | A data source can't be reached after 3 attempts, or the critic rejects the draft without a pass across 8 iterations (matches `MAX_ITERATIONS`) | Stop, log the reason, don't force a draft through |
+| **Stuck / give up** | A data source can't be reached after 3 attempts, or the critic rejects the draft without a pass across 3 revisions (`MAX_REVISIONS`) or 8 total loop iterations (`MAX_ITERATIONS`), whichever comes first | Stop, log the reason, don't force a draft through |
 | **Escalate to human** | Content touches an already above-the-line item: a flagged at-risk project, anything implying a leadership commitment or deadline, or a story batch over cap | Immediate HITL flag, separate from the normal weekly queue |
 
 ## 4. State
