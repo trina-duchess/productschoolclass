@@ -6,14 +6,14 @@
 
 ## What it does
 
-_One paragraph: the agent in action, end to end._
+Cortex is a PM chief-of-staff agent. Every Friday at noon (or from a webhook backup) it pulls a project's state and engineering activity, searches past updates and team norms for format, checks the roadmap, and drafts the weekly leadership status update plus up to 10 proposed next-sprint stories, each with a PRD justification and listed sources. An independent critic subagent checks every draft for untraceable claims, confidential content, and commitment language, and sends it back for revision (max 3). Nothing is posted: Cortex has no posting tool. Every draft and story batch lands in a HITL queue for the owning PM to approve, edit, or reject, and anything it can't resolve (missing data, a stuck critic loop, a tripped bound) is escalated rather than guessed.
 
 ## How you built it
 
-- **Coding agent:** _which one you directed (Claude Code / Cursor / Codex)_
-- **Model + bounds:** _model used, max iterations, cost cap, queue cap_
-- **Repo / config:** _path to your build in `00-build/`_
-- **Live link:** _[shareable URL, optional bonus]_
+- **Coding agent:** Claude Code
+- **Model + bounds:** `gpt-4o-mini` (critic uses the same model); max 8 iterations, max 3 critic revisions, $0.05 cost cap per run, 10-story queue cap, all enforced in code outside the model
+- **Repo / config:** `00-build/` (`agent.py`, `critic.py`, `tools.py`, `prompts.py`; fixtures in `00-build/fixtures/`)
+- **Live link:** none, runs locally
 
 ## Screenshots (required, collected M2 to M6)
 
@@ -21,16 +21,19 @@ Real screenshots of *your* Cortex running. These are the `00-build/CORTEX-ANATOM
 
 | # | Screenshot | What it shows | From |
 |---|---|---|---|
-| 1 | _[img]_ | happy-path run: a real drafted update + the HITL checkpoint (queued, not posted) | M2 |
+| 1 | ![happy path + HITL stop](m2-happy-hitl.png) | Happy-path run: Cortex drafted a grounded Northstar update (PRs #820/#823, activation 41%→43%, open issue #825) and queued 2 stories for review. The critic rejected all 3 revisions, so the 8-iteration cap held the draft and escalated it to a human. Nothing posted. $0.0058. | M2 |
 | 2 | _[img]_ | the critic rejecting a bad draft (revise/block) | M3 |
 | 3 | ![grounded citation trail](m4-grounded.png) + ![caught hallucination](m4-caught.png) | a grounded update citing pulled activity + a caught hallucination | M4 |
 | 4 | [transcript: capture 1](#bounds-evidence-m5-required-capture) | jailbreak refused + escalated | M5 |
 | 5 | [transcript: capture 2](#bounds-evidence-m5-required-capture) | an iteration/cost/queue bound halting a runaway | M5 |
-| 6 | _[img]_ | end-to-end run | M6 |
+| 6 | ![end-to-end run](m6-end-to-end.png) | Full happy-path run, end to end: Cortex pulled Northstar data, drafted a grounded update (PRs #820/#823, issue #825, activation 41%→43%, prior update for context), passed the critic, and reached the HITL checkpoint with 5 stories queued for approval. Nothing posted, no commitments made. $0.0068. | M6 |
 
 ## How to run it
 
-_Minimal steps for someone to reproduce the demo (env vars, and the command or the coding-agent prompt you used)._
+1. `cd 00-build`, then `pip install -r requirements.txt`
+2. Copy `.env.example` to `.env` and add `OPENAI_API_KEY`
+3. `python agent.py happy` (also `missing-data` and `jailbreak`; bound trip: `CORTEX_MAX_ITERATIONS=2 python agent.py happy`)
+4. Held drafts are saved to `run-output/` for review; nothing is posted
 
 ## Critic rejection evidence (M3 required capture)
 
